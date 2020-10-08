@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include "fileReader.h"
+#include "preProcessor.h"
 
 FileReader::FileReader(std::string fileName, std::vector<std::string> flags)
 {
@@ -21,23 +22,8 @@ FileReader::FileReader(std::string fileName, std::vector<std::string> flags)
 
 bool FileReader::makePreFile(std::string fileName)
 {
-  for (int i = 0; i < 3; i++)
-  {
-    fileName.pop_back();
-  }
-  fileName.push_back('p');
-  fileName.push_back('r');
-  fileName.push_back('e');
-  std::ofstream outf{fileName, std::ofstream::out};
-
-  if (!outf)
-  {
-    std::cerr << "Não conseguiu criar arquivo pre processado \n";
-    return false;
-  }
-
-  outf << "Criamos o arquivo pre processado \n";
-  outf.close();
+  PreProcessor *PreProcessor = new ::PreProcessor(fileName);
+  delete PreProcessor;
   return true;
 };
 
