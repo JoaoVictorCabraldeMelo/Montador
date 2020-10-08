@@ -35,7 +35,7 @@ public:
   std::vector<Directive> DirectiveTable;
   std::vector<Symbol> SymbolTable;
   Tables();
-
+  
   Directive *hasDirective(std::string Directive);
 
 };
