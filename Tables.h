@@ -30,15 +30,18 @@ class Tables
 private:
   void makeInstructions();
   void makeDirectives();
+
 public:
   Tables();
 
   std::vector<Instruction> InstructionTable;
   std::vector<Directive> DirectiveTable;
   std::vector<Symbol> SymbolTable;
-  
+
   Directive *hasDirective(std::string Directive);
   Instruction *hasInstruction(std::string Instruction);
+  Symbol *hasSymbol(std::string Symbol);
+  
 };
 
 #endif

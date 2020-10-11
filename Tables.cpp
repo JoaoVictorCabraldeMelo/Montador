@@ -169,3 +169,16 @@ Instruction *Tables::hasInstruction(std::string InstructionFile)
   }
   return nullptr;
 }
+
+Symbol *Tables::hasSymbol(std::string SymbolFile)
+{
+  std::transform(SymbolFile.begin(), SymbolFile.end(), SymbolFile.begin(), ::toupper);
+  for (Symbol &symbol : SymbolTable)
+  {
+    if (SymbolFile == symbol.symbol)
+    {
+      return &symbol;
+    }
+  }
+  return nullptr;
+}

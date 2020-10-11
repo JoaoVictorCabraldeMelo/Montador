@@ -9,7 +9,7 @@
 
 #include <cmath>
 
-void PreProcessor::run(std::string fileName)
+void PreProcessor::run(std::string fileName, bool putOnMemory)
 {
   Tables *table = new Tables();
 
@@ -146,53 +146,72 @@ void PreProcessor::run(std::string fileName)
 
   std::string maybeLabel, maybeAnything;
 
-  while (inf >> maybeAnything)
+  if (!putOnMemory)
   {
-    if (maybeAnything.back() == ':')
+    while (inf >> maybeAnything)
     {
-      std::string maybeLabelEQU = maybeAnything;
-      std::string maybeMacro = maybeAnything;
-      maybeMacro.pop_back();
-      if (hasMacro(maybeMacro) != nullptr)
+      if (maybeAnything.back() == ':')
       {
-        inf >> maybeAnything;
-        while (maybeAnything != "ENDMACRO")
+        std::string maybeLabelEQU = maybeAnything;
+        std::string maybeMacro = maybeAnything;
+        maybeMacro.pop_back();
+        if (hasMacro(maybeMacro) != nullptr)
         {
           inf >> maybeAnything;
-        }
-        inf >> maybeAnything;
-      }
-      maybeLabelEQU.pop_back();
-      DeclaredDirective maybeEqu = *hasDeclared(maybeLabelEQU);
-      if (maybeEqu.directive == "EQU")
-      {
-        inf >> maybeAnything;
-        inf >> maybeAnything;
-      }
-      else
-      {
-        outf << maybeAnything;
-        outf << " ";
-      }
-    }
-    else if (table->hasDirective(maybeAnything) != nullptr)
-    {
-      std::string param, maybeAnythingIF;
-      Directive directive = *table->hasDirective(maybeAnything);
-
-      if (directive.name == "IF")
-      {
-        inf >> param;
-        if (hasDeclared(param) != nullptr)
-        {
-          DeclaredDirective preProcessorIf = *hasDeclared(param);
-          if (preProcessorIf.param == "0")
+          while (maybeAnything != "ENDMACRO")
           {
-            inf >> maybeAnythingIF;
-            if (maybeAnythingIF.back() == ':')
+            inf >> maybeAnything;
+          }
+          inf >> maybeAnything;
+        }
+        maybeLabelEQU.pop_back();
+        DeclaredDirective maybeEqu = *hasDeclared(maybeLabelEQU);
+        if (maybeEqu.directive == "EQU")
+        {
+          inf >> maybeAnything;
+          inf >> maybeAnything;
+        }
+        else
+        {
+          outf << maybeAnything;
+          outf << " ";
+        }
+      }
+      else if (table->hasDirective(maybeAnything) != nullptr)
+      {
+        std::string param, maybeAnythingIF;
+        Directive directive = *table->hasDirective(maybeAnything);
+
+        if (directive.name == "IF")
+        {
+          inf >> param;
+          if (hasDeclared(param) != nullptr)
+          {
+            DeclaredDirective preProcessorIf = *hasDeclared(param);
+            if (preProcessorIf.param == "0")
             {
               inf >> maybeAnythingIF;
-              if (table->hasDirective(maybeAnythingIF) != nullptr)
+              if (maybeAnythingIF.back() == ':')
+              {
+                inf >> maybeAnythingIF;
+                if (table->hasDirective(maybeAnythingIF) != nullptr)
+                {
+                  Directive diretiva = *table->hasDirective(maybeAnythingIF);
+                  for (int i = 1; i <= diretiva.nro_operandos; i++)
+                  {
+                    inf >> param;
+                  }
+                }
+                else if (table->hasInstruction(maybeAnythingIF) != nullptr)
+                {
+                  Instruction instruction = *table->hasInstruction(maybeAnythingIF);
+                  for (int i = 0; i < instruction.nro_operandos; i++)
+                  {
+                    inf >> param;
+                  }
+                }
+              }
+              else if (table->hasDirective(maybeAnythingIF) != nullptr)
               {
                 Directive diretiva = *table->hasDirective(maybeAnythingIF);
                 for (int i = 1; i <= diretiva.nro_operandos; i++)
@@ -209,36 +228,56 @@ void PreProcessor::run(std::string fileName)
                 }
               }
             }
-            else if (table->hasDirective(maybeAnythingIF) != nullptr)
-            {
-              Directive diretiva = *table->hasDirective(maybeAnythingIF);
-              for (int i = 1; i <= diretiva.nro_operandos; i++)
-              {
-                inf >> param;
-              }
-            }
-            else if (table->hasInstruction(maybeAnythingIF) != nullptr)
-            {
-              Instruction instruction = *table->hasInstruction(maybeAnythingIF);
-              for (int i = 0; i < instruction.nro_operandos; i++)
-              {
-                inf >> param;
-              }
-            }
           }
         }
+        else
+        {
+          outf << maybeAnything;
+          for (int i = 1; i <= directive.nro_operandos; i++)
+          {
+            outf << " ";
+            inf >> param;
+            if (hasDeclared(param) != nullptr)
+            {
+              DeclaredDirective declared = *hasDeclared(param);
+              if (declared.param == "SPACE" || declared.param == "MACRO")
+              {
+                outf << declared.label;
+              }
+              else
+              {
+                outf << declared.param;
+              }
+            }
+            else
+            {
+              outf << param;
+            }
+          }
+          outf << std::endl;
+        }
       }
-      else
+      else if (table->hasInstruction(maybeAnything) != nullptr)
       {
+        std::string param;
+        Instruction instruction = *table->hasInstruction(maybeAnything);
         outf << maybeAnything;
-        for (int i = 1; i <= directive.nro_operandos; i++)
+        for (int i = 1; i <= instruction.nro_operandos; i++)
         {
           outf << " ";
           inf >> param;
+          if (param.back() == ',')
+          {
+            param.pop_back();
+          }
           if (hasDeclared(param) != nullptr)
           {
             DeclaredDirective declared = *hasDeclared(param);
             if (declared.param == "SPACE" || declared.param == "MACRO")
+            {
+              outf << declared.label;
+            }
+            else if (instruction.name == "JMP" || instruction.name == "JMPN" || instruction.name == "JMPP" || instruction.name == "JMPZ")
             {
               outf << declared.label;
             }
@@ -254,126 +293,316 @@ void PreProcessor::run(std::string fileName)
         }
         outf << std::endl;
       }
-    }
-    else if (table->hasInstruction(maybeAnything) != nullptr)
-    {
-      std::string param;
-      Instruction instruction = *table->hasInstruction(maybeAnything);
-      outf << maybeAnything;
-      for (int i = 1; i <= instruction.nro_operandos; i++)
+      else if (hasMacro(maybeAnything) != nullptr)
       {
-        outf << " ";
-        inf >> param;
-        if (param.back() == ',')
+        MacroNameAndMacroDefinition macro = *hasMacro(maybeAnything);
+        std::vector<std::string> params;
+
+        int i = 0;
+        if (macro.nro_Argumentos > 0)
         {
-          param.pop_back();
+          while (macro.nro_Argumentos > i)
+          {
+            inf >> maybeAnything;
+            params.push_back(maybeAnything);
+            i++;
+          }
+          int contadorDoParametro = 0;
+          for (auto &param : params)
+          {
+            for (int i = 0; i < static_cast<int>(macro.macroDefinition.size()); i++)
+            {
+              if (macro.macroDefinition[i] == macro.macroDefinition[contadorDoParametro])
+              {
+                macro.macroDefinition[i] = param;
+              }
+            }
+            contadorDoParametro++;
+          }
         }
-        if (hasDeclared(param) != nullptr)
+        for (int i = 0; i < static_cast<int>(macro.macroDefinition.size()); i++)
         {
-          DeclaredDirective declared = *hasDeclared(param);
-          if (declared.param == "SPACE" || declared.param == "MACRO")
+          if (macro.macroDefinition[i].back() == ':')
           {
-            outf << declared.label;
+            outf << macro.macroDefinition[i];
           }
-          else if (instruction.name == "JMP" || instruction.name == "JMPN" || instruction.name == "JMPP" || instruction.name == "JMPZ")
+          else if (table->hasDirective(macro.macroDefinition[i]) != nullptr)
           {
-            outf << declared.label;
+            Directive declared = *table->hasDirective(macro.macroDefinition[i]);
+            for (int j = i; j < i + declared.nro_operandos; j++)
+            {
+              if (hasDeclared(macro.macroDefinition[i]) != nullptr)
+              {
+                DeclaredDirective declared = *hasDeclared(macro.macroDefinition[i]);
+                if (declared.param == "SPACE" || declared.param == "CONST")
+                {
+                  outf << " ";
+                  outf << declared.label;
+                  outf << std::endl;
+                }
+              }
+              else
+              {
+                outf << macro.macroDefinition[j];
+                if (j != i + declared.nro_operandos - 1)
+                {
+                  outf << " ";
+                }
+              }
+            }
           }
-          else
+          else if (table->hasInstruction(macro.macroDefinition[i]) != nullptr)
           {
-            outf << declared.param;
+            Instruction instruction = *table->hasInstruction(macro.macroDefinition[i]);
+            for (int j = i; j <= (i + instruction.nro_operandos); j++)
+            {
+              if (hasDeclared(macro.macroDefinition[j]) != nullptr)
+              {
+                DeclaredDirective declared = *hasDeclared(macro.macroDefinition[j]);
+                if (declared.param == "SPACE" || declared.param == "MACRO")
+                {
+                  outf << " ";
+                  outf << declared.label;
+                  outf << std::endl;
+                }
+                else if (instruction.name == "JMP" || instruction.name == "JMPN" || instruction.name == "JMPP" || instruction.name == "JMPZ")
+                {
+                  outf << " ";
+                  outf << declared.label;
+                  outf << std::endl;
+                }
+              }
+              else
+              {
+                outf << macro.macroDefinition[j];
+                if (j == i + instruction.nro_operandos - 1)
+                {
+                  outf << " ";
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    while (inf >> maybeAnything)
+    {
+      if (maybeAnything.back() == ':')
+      {
+        std::string maybeLabelEQU = maybeAnything;
+        std::string maybeMacro = maybeAnything;
+        maybeMacro.pop_back();
+        if (hasMacro(maybeMacro) != nullptr)
+        {
+          inf >> maybeAnything;
+          while (maybeAnything != "ENDMACRO")
+          {
+            inf >> maybeAnything;
+          }
+          inf >> maybeAnything;
+        }
+        maybeLabelEQU.pop_back();
+        DeclaredDirective maybeEqu = *hasDeclared(maybeLabelEQU);
+        if (maybeEqu.directive == "EQU")
+        {
+          inf >> maybeAnything;
+          inf >> maybeAnything;
+        }
+        else
+        {
+          OnMemory.push_back(maybeAnything);
+        }
+      }
+      else if (table->hasDirective(maybeAnything) != nullptr)
+      {
+        std::string param, maybeAnythingIF;
+        Directive directive = *table->hasDirective(maybeAnything);
+
+        if (directive.name == "IF")
+        {
+          inf >> param;
+          if (hasDeclared(param) != nullptr)
+          {
+            DeclaredDirective preProcessorIf = *hasDeclared(param);
+            if (preProcessorIf.param == "0")
+            {
+              inf >> maybeAnythingIF;
+              if (maybeAnythingIF.back() == ':')
+              {
+                inf >> maybeAnythingIF;
+                if (table->hasDirective(maybeAnythingIF) != nullptr)
+                {
+                  Directive diretiva = *table->hasDirective(maybeAnythingIF);
+                  for (int i = 1; i <= diretiva.nro_operandos; i++)
+                  {
+                    inf >> param;
+                  }
+                }
+                else if (table->hasInstruction(maybeAnythingIF) != nullptr)
+                {
+                  Instruction instruction = *table->hasInstruction(maybeAnythingIF);
+                  for (int i = 0; i < instruction.nro_operandos; i++)
+                  {
+                    inf >> param;
+                  }
+                }
+              }
+              else if (table->hasDirective(maybeAnythingIF) != nullptr)
+              {
+                Directive diretiva = *table->hasDirective(maybeAnythingIF);
+                for (int i = 1; i <= diretiva.nro_operandos; i++)
+                {
+                  inf >> param;
+                }
+              }
+              else if (table->hasInstruction(maybeAnythingIF) != nullptr)
+              {
+                Instruction instruction = *table->hasInstruction(maybeAnythingIF);
+                for (int i = 0; i < instruction.nro_operandos; i++)
+                {
+                  inf >> param;
+                }
+              }
+            }
           }
         }
         else
         {
-          outf << param;
-        }
-      }
-      outf << std::endl;
-    }
-    else if (hasMacro(maybeAnything) != nullptr)
-    {
-      MacroNameAndMacroDefinition macro = *hasMacro(maybeAnything);
-      std::vector<std::string> params;
-      int i = 0;
-      if (macro.nro_Argumentos > 0)
-      {
-        while (macro.nro_Argumentos > i)
-        {
-          inf >> maybeAnything;
-          params.push_back(maybeAnything);
-          i++;
-        }
-        int contadorDoParametro = 0;
-        for (auto &param : params)
-        {
-          for (int i = 0; i < static_cast<int>(macro.macroDefinition.size()); i++)
+          OnMemory.push_back(maybeAnything);
+          for (int i = 1; i <= directive.nro_operandos; i++)
           {
-            if (macro.macroDefinition[i] == macro.macroDefinition[contadorDoParametro])
-            {
-              macro.macroDefinition[i] = param;
-            }
-          }
-          contadorDoParametro++;
-        }
-      }
-      for (int i = 0; i < static_cast<int>(macro.macroDefinition.size()); i++)
-      {
-        if (macro.macroDefinition[i].back() == ':')
-        {
-          outf << macro.macroDefinition[i];
-        }
-        else if (table->hasDirective(macro.macroDefinition[i]) != nullptr)
-        {
-          Directive declared = *table->hasDirective(macro.macroDefinition[i]);
-          for (int j = i; j < i + declared.nro_operandos; j++)
-          {
-            if (hasDeclared(macro.macroDefinition[i]) != nullptr)
-            {
-              DeclaredDirective declared = *hasDeclared(macro.macroDefinition[i]);
-              if (declared.param == "SPACE" || declared.param == "MACRO")
-              {
-                outf << declared.label;
-              }
-            }
-            else
-            {
-              outf << macro.macroDefinition[j];
-              if (j != i + declared.nro_operandos - 1)
-              {
-                outf << " ";
-              }
-            }
-          }
-          outf << std::endl;
-        }
-        else if (table->hasInstruction(macro.macroDefinition[i]) != nullptr)
-        {
-          Instruction instruction = *table->hasInstruction(macro.macroDefinition[i]);
-          for (int j = i; j < i + instruction.nro_operandos; j++)
-          {
-            if (hasDeclared(macro.macroDefinition[j]) != nullptr)
+            inf >> param;
+            if (hasDeclared(param) != nullptr)
             {
               DeclaredDirective declared = *hasDeclared(param);
               if (declared.param == "SPACE" || declared.param == "MACRO")
               {
-                outf << declared.label;
+                OnMemory.push_back(declared.label);
               }
-              else if (instruction.name == "JMP" || instruction.name == "JMPN" || instruction.name == "JMPP" || instruction.name == "JMPZ")
+              else
               {
-                outf << declared.label;
+                OnMemory.push_back(declared.param);
               }
             }
             else
             {
-              outf << macro.macroDefinition[j];
-              if (j != i + instruction.nro_operandos - 1)
+              OnMemory.push_back(param);
+            }
+          }
+        }
+      }
+      else if (table->hasInstruction(maybeAnything) != nullptr)
+      {
+        std::string param;
+        Instruction instruction = *table->hasInstruction(maybeAnything);
+        OnMemory.push_back(maybeAnything);
+        for (int i = 1; i <= instruction.nro_operandos; i++)
+        {
+          inf >> param;
+          if (param.back() == ',')
+          {
+            param.pop_back();
+          }
+          if (hasDeclared(param) != nullptr)
+          {
+            DeclaredDirective declared = *hasDeclared(param);
+            if (declared.param == "SPACE" || declared.param == "MACRO" || declared.param == "CONST")
+            {
+              OnMemory.push_back(declared.label);
+            }
+            else if (instruction.name == "JMP" || instruction.name == "JMPN" || instruction.name == "JMPP" || instruction.name == "JMPZ")
+            {
+              OnMemory.push_back(declared.label);
+            }
+            else
+            {
+              OnMemory.push_back(declared.param);
+            }
+          }
+          else
+          {
+            OnMemory.push_back(param);
+          }
+        }
+      }
+      else if (hasMacro(maybeAnything) != nullptr)
+      {
+        MacroNameAndMacroDefinition macro = *hasMacro(maybeAnything);
+        std::vector<std::string> params;
+
+        int i = 0;
+        if (macro.nro_Argumentos > 0)
+        {
+          while (macro.nro_Argumentos > i)
+          {
+            inf >> maybeAnything;
+            params.push_back(maybeAnything);
+            i++;
+          }
+          int contadorDoParametro = 0;
+          for (auto &param : params)
+          {
+            for (int i = 0; i < static_cast<int>(macro.macroDefinition.size()); i++)
+            {
+              if (macro.macroDefinition[i] == macro.macroDefinition[contadorDoParametro])
               {
-                outf << " ";
+                macro.macroDefinition[i] = param;
+              }
+            }
+            contadorDoParametro++;
+          }
+        }
+        for (int i = 0; i < static_cast<int>(macro.macroDefinition.size()); i++)
+        {
+          if (macro.macroDefinition[i].back() == ':')
+          {
+            OnMemory.push_back(macro.macroDefinition[i]);
+          }
+          else if (table->hasDirective(macro.macroDefinition[i]) != nullptr)
+          {
+            Directive declared = *table->hasDirective(macro.macroDefinition[i]);
+            for (int j = i; j < i + declared.nro_operandos; j++)
+            {
+              if (hasDeclared(macro.macroDefinition[i]) != nullptr)
+              {
+                DeclaredDirective declared = *hasDeclared(macro.macroDefinition[i]);
+                if (declared.param == "SPACE" || declared.param == "CONST")
+                {
+                  OnMemory.push_back(declared.label);
+                }
+              }
+              else
+              {
+                OnMemory.push_back(macro.macroDefinition[j]);
               }
             }
           }
-          outf << std::endl;
+          else if (table->hasInstruction(macro.macroDefinition[i]) != nullptr)
+          {
+            Instruction instruction = *table->hasInstruction(macro.macroDefinition[i]);
+            for (int j = i; j <= (i + instruction.nro_operandos); j++)
+            {
+              if (hasDeclared(macro.macroDefinition[j]) != nullptr)
+              {
+                DeclaredDirective declared = *hasDeclared(macro.macroDefinition[j]);
+                if (declared.param == "SPACE" || declared.param == "MACRO")
+                {
+                  OnMemory.push_back(declared.label);
+                }
+                else if (instruction.name == "JMP" || instruction.name == "JMPN" || instruction.name == "JMPP" || instruction.name == "JMPZ")
+                {
+                  OnMemory.push_back(declared.label);
+                }
+              }
+              else
+              {
+                OnMemory.push_back(macro.macroDefinition[j]);
+              }
+            }
+          }
         }
       }
     }
@@ -428,7 +657,7 @@ MacroNameAndMacroDefinition *PreProcessor::hasMacro(std::string macroName)
   return nullptr;
 }
 
-PreProcessor::PreProcessor(std::string fileName)
+PreProcessor::PreProcessor(std::string fileName, bool putOnMemory)
 {
-  run(fileName);
+  run(fileName, putOnMemory);
 };

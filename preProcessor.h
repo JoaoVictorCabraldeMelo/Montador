@@ -25,15 +25,16 @@ struct DeclaredDirective
 class PreProcessor
 {
 private:
-  std::string changeFileNameExtension(std::string fileName);
   bool flagSection;
   bool flagEqu;
 
 public:
+  std::string changeFileNameExtension(std::string fileName);
   std::vector<DeclaredDirective> DeclaredTable;
   std::vector<MacroNameAndMacroDefinition> MacroTable;
-  PreProcessor(std::string fileName);
-  void run(std::string fileName);
+  std::vector<std::string> OnMemory;
+  PreProcessor(std::string fileName, bool putOnMemory);
+  void run(std::string fileName, bool putOnMemory);
   DeclaredDirective *hasDeclared(std::string Label);
   MacroNameAndMacroDefinition *hasMacro(std::string macroName);
 };
