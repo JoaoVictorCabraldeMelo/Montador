@@ -156,3 +156,16 @@ Directive *Tables::hasDirective(std::string DirectiveFile)
 
   return nullptr;
 };
+
+Instruction *Tables::hasInstruction(std::string InstructionFile)
+{
+  std::transform(InstructionFile.begin(), InstructionFile.end(), InstructionFile.begin(), ::toupper);
+  for (Instruction &instruction : InstructionTable)
+  {
+    if (InstructionFile == instruction.name)
+    {
+      return &instruction;
+    }
+  }
+  return nullptr;
+}

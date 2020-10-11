@@ -31,13 +31,14 @@ private:
   void makeInstructions();
   void makeDirectives();
 public:
+  Tables();
+
   std::vector<Instruction> InstructionTable;
   std::vector<Directive> DirectiveTable;
   std::vector<Symbol> SymbolTable;
-  Tables();
   
   Directive *hasDirective(std::string Directive);
-
+  Instruction *hasInstruction(std::string Instruction);
 };
 
 #endif
